@@ -1,20 +1,22 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
 def train_late_delivery_model(df):
 
-    # Feature selection (NO leakage)
-    X = df[[
-        'Shipping_Mode',
-        'Days_for_shipment_(scheduled)',
-        'Order_Item_Discount_Rate',
-        'Order_Item_Quantity',
-        'Sales',
-        'Order_Region'
-    ]].copy()
+    X = df[
+        [
+            'Shipping_Mode',
+            'Days_for_shipment_(scheduled)',
+            'Days_for_shipping_(real)',
+            'Order_Item_Discount_Rate',
+            'Order_Item_Quantity',
+            'Sales',
+            'Order_Region'
+        ]
+    ].copy()
 
     y = df['Late_delivery_risk']
 
@@ -25,18 +27,21 @@ def train_late_delivery_model(df):
     X['Order_Region'] = region_enc.fit_transform(X['Order_Region'])
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
+        X,
+        y,
         test_size=0.2,
         random_state=42,
         stratify=y
     )
 
-    # Gradient Boosting
-    model = GradientBoostingClassifier(
-        n_estimators=200,
-        learning_rate=0.1,
-        max_depth=3,
-        random_state=42
+    model = RandomForestClassifier(
+        n_estimators=400,
+        max_depth=15,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        class_weight="balanced",
+        random_state=42,
+        n_jobs=-1
     )
 
     model.fit(X_train, y_train)
@@ -50,7 +55,9 @@ def train_late_delivery_model(df):
 
 def get_feature_importance(model, feature_names):
 
-    return pd.DataFrame({
-        "Feature": feature_names,
-        "Importance": model.feature_importances_
-    }).sort_values(by="Importance", ascending=False)
+    return pd.DataFrame(
+        {
+            "Feature": feature_names,
+            "Importance": model.feature_importances_
+        }
+    ).sort_values(by="Importance", ascending=False)
